@@ -49,6 +49,10 @@ CREATE TABLE call_results (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+
+
+
+
 -- Insert default agent configurations
 INSERT INTO agent_configs (name, scenario_type, system_prompt, conversation_flow, emergency_triggers) VALUES 
 (

@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { agentConfigApi, callsApi } from '../services/api';
 import { Phone, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { callsApi, agentConfigApi } from '../services/api';
+
+
+
+// IMPORTANT: Ensure you have initialized the Retell SDK in App.jsx or main.jsx
+// import { Retell } from '@retell/sdk';
+// Retell.initialize({});
 
 const CallTrigger = () => {
   const [configs, setConfigs] = useState([]);
@@ -9,7 +15,6 @@ const CallTrigger = () => {
   const [formData, setFormData] = useState({
     agent_config_id: '',
     driver_name: '',
-    driver_phone: '',
     load_number: ''
   });
 
@@ -31,38 +36,7 @@ const CallTrigger = () => {
       }
     } catch (error) {
       toast.error('Failed to fetch agent configurations');
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!formData.agent_config_id) {
-      toast.error('Please select an agent configuration');
-      return;
-    }
-
-    setLoading(true);
-    
-    try {
-      const response = await callsApi.start(formData);
-      
-      if (response.data.success) {
-        toast.success('Call started successfully!');
-        // Reset form
-        setFormData({
-          agent_config_id: configs[0]?.id || '',
-          driver_name: '',
-          driver_phone: '',
-          load_number: ''
-        });
-      } else {
-        toast.error('Failed to start call');
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to start call');
-    } finally {
-      setLoading(false);
+      console.error(error);
     }
   };
 
@@ -74,25 +48,53 @@ const CallTrigger = () => {
     }));
   };
 
-  const formatPhoneNumber = (value) => {
-    // Remove all non-digits
-    const digits = value.replace(/\D/g, '');
-    
-    // Format as (XXX) XXX-XXXX
-    if (digits.length >= 10) {
-      return `+1${digits.slice(0, 10)}`;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.agent_config_id) {
+      toast.error('Please select an agent configuration');
+      return;
     }
-    return digits;
+
+    setLoading(true);
+
+    try {
+      // Start WebRTC call instead of phone
+      const response = await callsApi.startWebRTC(formData);
+
+
+
+      if (response.data.success) {
+        toast.success('Call started successfully!');
+        
+        // Connect using Retell WebRTC SDK
+        window.Retell.connect(response.data.token, response.data.agent_id);
+
+        // Reset form
+        setFormData({
+          agent_config_id: configs[0]?.id || '',
+          driver_name: '',
+          load_number: ''
+        });
+      } else {
+        toast.error('Failed to start call');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to start call');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const selectedConfig = configs.find(c => c.id === formData.agent_config_id);
 
   return (
     <div className="space-y-8">
+      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Start Test Call</h2>
         <p className="mt-1 text-sm text-gray-600">
-          Trigger a phone call using your configured AI voice agent
+          Trigger an in-app call using your configured AI voice agent
         </p>
       </div>
 
@@ -100,7 +102,7 @@ const CallTrigger = () => {
         {/* Call Form */}
         <div className="bg-white shadow rounded-lg p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-6">Call Details</h3>
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="agent_config_id" className="block text-sm font-medium text-gray-700">
@@ -140,28 +142,6 @@ const CallTrigger = () => {
             </div>
 
             <div>
-              <label htmlFor="driver_phone" className="block text-sm font-medium text-gray-700">
-                Driver Phone Number
-              </label>
-              <input
-                type="tel"
-                id="driver_phone"
-                name="driver_phone"
-                required
-                value={formData.driver_phone}
-                onChange={(e) => {
-                  const formatted = formatPhoneNumber(e.target.value);
-                  setFormData(prev => ({ ...prev, driver_phone: formatted }));
-                }}
-                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                placeholder="+1234567890"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Format: +1 followed by 10 digits
-              </p>
-            </div>
-
-            <div>
               <label htmlFor="load_number" className="block text-sm font-medium text-gray-700">
                 Load Number
               </label>
@@ -185,12 +165,12 @@ const CallTrigger = () => {
               {loading ? (
                 <>
                   <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                  Starting Call...
+                  Connecting...
                 </>
               ) : (
                 <>
                   <Phone className="h-4 w-4 mr-2" />
-                  Start Test Call
+                  Start In-App Call
                 </>
               )}
             </button>
@@ -208,14 +188,12 @@ const CallTrigger = () => {
         {/* Configuration Preview */}
         <div className="bg-white shadow rounded-lg p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-6">Selected Configuration</h3>
-          
           {selectedConfig ? (
             <div className="space-y-4">
               <div>
                 <h4 className="text-sm font-medium text-gray-700">Configuration Name</h4>
                 <p className="mt-1 text-sm text-gray-900">{selectedConfig.name}</p>
               </div>
-
               <div>
                 <h4 className="text-sm font-medium text-gray-700">Scenario Type</h4>
                 <span className={`mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -226,22 +204,19 @@ const CallTrigger = () => {
                   {selectedConfig.scenario_type === 'check_in' ? 'Check-in' : 'Emergency'}
                 </span>
               </div>
-
               <div>
                 <h4 className="text-sm font-medium text-gray-700">System Prompt</h4>
                 <p className="mt-1 text-sm text-gray-600 max-h-32 overflow-y-auto">
                   {selectedConfig.system_prompt}
                 </p>
               </div>
-
               <div>
                 <h4 className="text-sm font-medium text-gray-700">Conversation Flow</h4>
                 <p className="mt-1 text-sm text-gray-600 max-h-24 overflow-y-auto">
                   {selectedConfig.conversation_flow}
                 </p>
               </div>
-
-              {selectedConfig.emergency_triggers && selectedConfig.emergency_triggers.length > 0 && (
+              {selectedConfig.emergency_triggers?.length > 0 && (
                 <div>
                   <h4 className="text-sm font-medium text-gray-700">Emergency Triggers</h4>
                   <div className="mt-1 flex flex-wrap gap-1">
@@ -256,32 +231,6 @@ const CallTrigger = () => {
                   </div>
                 </div>
               )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700">Max Retries</h4>
-                  <p className="mt-1 text-sm text-gray-900">{selectedConfig.max_retries}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-700">Interruption Sensitivity</h4>
-                  <p className="mt-1 text-sm text-gray-900">{selectedConfig.interruption_sensitivity}</p>
-                </div>
-              </div>
-
-              <div className="flex space-x-4">
-                <div className="flex items-center">
-                  <div className={`h-3 w-3 rounded-full mr-2 ${
-                    selectedConfig.backchannel_enabled ? 'bg-green-400' : 'bg-gray-300'
-                  }`}></div>
-                  <span className="text-sm text-gray-700">Backchannel</span>
-                </div>
-                <div className="flex items-center">
-                  <div className={`h-3 w-3 rounded-full mr-2 ${
-                    selectedConfig.filler_words_enabled ? 'bg-green-400' : 'bg-gray-300'
-                  }`}></div>
-                  <span className="text-sm text-gray-700">Filler Words</span>
-                </div>
-              </div>
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500">

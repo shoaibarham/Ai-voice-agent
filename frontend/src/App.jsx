@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import Dashboard from './components/Dashboard';
 import AgentConfig from './components/AgentConfig';

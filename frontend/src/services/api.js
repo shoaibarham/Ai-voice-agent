@@ -32,10 +32,12 @@ export const callsApi = {
   getAll: () => api.get('/calls'),
   getById: (id) => api.get(`/calls/${id}`),
   getResults: (id) => api.get(`/calls/${id}/results`),
-  start: (data) => api.post('/calls/start', data),
+  startWebRTC: (data) => api.post('/calls/start', data),
+
 };
 
 // Dashboard API
+
 export const dashboardApi = {
   getStats: () => api.get('/dashboard/stats'),
 };

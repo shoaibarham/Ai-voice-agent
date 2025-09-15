@@ -27,17 +27,12 @@ const AgentConfig = () => {
 
   const fetchConfigs = async () => {
     try {
-      setLoading(true);
       const response = await agentConfigApi.getAll();
-      if (response?.data?.success) {
-        setConfigs(response.data.data || []);
-      } else {
-        throw new Error('Invalid response format');
+      if (response.data.success) {
+        setConfigs(response.data.data);
       }
     } catch (error) {
-      console.error('AgentConfig error:', error);
       toast.error('Failed to fetch agent configurations');
-      setConfigs([]);
     } finally {
       setLoading(false);
     }

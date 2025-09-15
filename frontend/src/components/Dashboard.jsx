@@ -19,24 +19,13 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      setLoading(true);
       const response = await dashboardApi.getStats();
-      if (response?.data?.success) {
+      if (response.data.success) {
         setStats(response.data.data.stats);
         setRecentCalls(response.data.data.recent_calls);
-      } else {
-        throw new Error('Invalid response format');
       }
     } catch (error) {
-      console.error('Dashboard error:', error);
       toast.error('Failed to fetch dashboard data');
-      setStats({
-        total_calls: 0,
-        completed_calls: 0,
-        in_progress_calls: 0,
-        failed_calls: 0
-      });
-      setRecentCalls([]);
     } finally {
       setLoading(false);
     }
