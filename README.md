@@ -38,6 +38,8 @@ ai-voice-agent/
 └── README.md
 ```
 
+![Dashboard](image.png)
+
 ## Prerequisites
 
 Before running this application, you need:
